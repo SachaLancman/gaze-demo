@@ -1,0 +1,54 @@
+Maison Lunaire gaze coverage
+============================
+
+Clips (gaze-loop.mp4 / v1 skipped — closed eyes):
+  outer  media/gaze-loop-v2.mp4   193 frames at 24fps
+  inner  media/gaze-inner.mp4     193 frames at 24fps
+
+Pose: MediaPipe Face Landmarker on every frame. OpenCV solvePnP Euler
+angles were gimbal-unstable (yaw flips to ±170°), so the stored (yaw,
+pitch) is the recentered nose-offset in approximate degrees:
+  +yaw    = looking toward the viewer's right
+  +pitch  = looking up
+  origin  = looking-at-camera rest pose
+Sanity vs the outer-clip timeline (viewer's POV):
+  t=1s right  yaw=+14.3  pitch=-0.3
+  t=2s up     yaw=+14.5  pitch=+8.6   (actually up-right)
+  t=3s left   yaw=-11.0  pitch=+13.2  (actually up-left)
+  t=4s "down" yaw=-25.2  pitch=-7.8   (left and only slightly down)
+  t=0 and t=8 near origin
+
+Filter: 11 inner frames around 5.58–5.9s dropped (eyes closed, EAR
+and blink blendshapes). 375 kept, then near-duplicate poses deduped
+at 0.5° → 166 clip frames + 1 rest frame from portrait.jpg = 167.
+
+Final set:
+  rest   1     (0, 0)
+  inner  38    r 0.22–6.26   (small glances near center)
+  outer  128   r 1.34–26.35  (large horseshoe along left / up / right)
+  maxAbsYaw=25.18  maxAbsPitch=14.17  rMax=26.35
+
+Coverage (cells of the yaw-pitch disk r≤rMax, nearest ≤ 3.16°):
+  all:        37.9%
+  interior (r<0.45 rmax):  59.4%   inner clip helps here
+  mid ring (0.45–0.75):    48.8%
+  outer (r>0.75):          20.6%   expected for a ring, not a filled disk
+  diagonals:  29.4%
+  cardinals:  46.6%
+
+Angular bins of the outer clip (30° wedges, 0=right, 90=up):
+  well covered: right, NE, up, NW, left, and slight-down-right (SE 330°)
+  EMPTY:        SW (210–240), straight down (270), SSE (300)
+
+Gaps to fill with another clip (drop a file in media/ and re-run
+tools/process_frames.py — no code changes needed):
+  1. STRAIGHT DOWN and the lower diagonals (SW, SE below ~-8° pitch).
+     The current "down" extreme is a left-profile with only -8° pitch.
+     A downward-looking clip (and down-right / down-left) is the
+     highest-value addition.
+  2. A mid-radius ring (~8–14°) would fill the band between the inner
+     cluster (r≤6) and the outer horseshoe (typical r~15).
+  3. Pure up is actually fine (21 near-axis up frames, pitch up to 14°).
+
+Payload: 167 WebP frames at 848×480 q=64 + rest + site = 1.93 MB
+(source is 848×480; not upscaled). Under the 8 MB budget.

@@ -1,0 +1,10 @@
+.DS_Store
+*.log
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+media/
+shot-*.png
+tools/__pycache__/
+.idea/

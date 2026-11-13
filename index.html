@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080706">
+  <meta name="color-scheme" content="dark">
+  <title>Maison Lunaire — He keeps time</title>
+  <meta name="description" content="Maison Lunaire is a fictional atelier. A concept: a man follows your cursor. It is not 3D, and nothing is for sale.">
+  <meta property="og:title" content="Maison Lunaire — He keeps time">
+  <meta property="og:description" content="A concept for a fictional watch house. He follows your cursor. It is not 3D.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400;1,6..96,500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <img class="poster" id="poster" src="frames/rest.webp" alt="" aria-hidden="true" width="848" height="480">
+  <canvas id="stage" aria-hidden="true"></canvas>
+
+  <div class="loader" id="loader">
+    <p class="loader__brand">Maison Lunaire</p>
+    <p class="loader__sub">Meeting his gaze</p>
+  </div>
+
+  <header class="nav">
+    <a class="nav__brand" href="#hero" aria-label="Maison Lunaire home">Maison Lunaire</a>
+    <nav class="nav__links" aria-label="Primary">
+      <a href="https://sachalancman.github.io/watch-demo/">The collection</a>
+      <a href="#piece">The piece</a>
+      <a href="#appointment">Appointment</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="hero">
+      <div class="hero__copy">
+        <p class="cap">A study in attention</p>
+        <h1>He keeps time.<br>You keep his attention.</h1>
+        <p class="hero__lead">Move, and he looks. A concept for Maison Lunaire — a fictional house — and it is not 3D.</p>
+      </div>
+      <p class="hero__hint cap" id="hint">Move your cursor &nbsp;·&nbsp; he will follow</p>
+    </section>
+
+    <section class="piece" id="piece">
+      <div class="piece__grid">
+        <div class="piece__copy">
+          <p class="cap">The piece</p>
+          <h2>A steel dive,<br>worn as intended.</h2>
+          <p>On his wrist, a black-bezel dive in steel. Six more watches sit in the round, in the collection lookbook.</p>
+          <a class="piece__cta" href="https://sachalancman.github.io/watch-demo/">
+            <span>The collection</span>
+            <span class="piece__dot" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
+            </span>
+          </a>
+        </div>
+        <figure class="piece__fig">
+          <img src="assets/watch.webp" alt="A steel dive watch with a black bezel, on a wrist against a charcoal coat and black turtleneck." width="423" height="270">
+        </figure>
+      </div>
+    </section>
+
+    <section class="cta" id="appointment">
+      <p class="cap">By appointment</p>
+      <h2>A private viewing.</h2>
+      <p class="cta__lead">This is a demonstration — nothing is sent, and nothing is for sale. Maison Lunaire is a fictional atelier, not a watchmaker.</p>
+      <form class="cta__form" id="viewingForm" action="#" method="post">
+        <label class="field">
+          <span class="cap">Name</span>
+          <input type="text" name="name" autocomplete="name" placeholder="Your name">
+        </label>
+        <label class="field">
+          <span class="cap">Email</span>
+          <input type="email" name="email" autocomplete="email" placeholder="you@atelier.example" required>
+        </label>
+        <button class="cta__btn" type="submit">
+          <span>Request a viewing</span>
+          <span class="piece__dot" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </span>
+        </button>
+      </form>
+      <p class="cta__thanks" id="thanks" hidden>Thank you. In a real maison, a letter would follow. This is only a demonstration.</p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p><strong>Concept demo. Model and footage are AI-generated.</strong> Maison Lunaire is a fictional name used for this design demonstration. It is not a watchmaker, and nothing is offered for sale. Not affiliated with any brand.</p>
+  </footer>
+
+  <script src="js/gaze.js" defer></script>
+</body>
+</html>

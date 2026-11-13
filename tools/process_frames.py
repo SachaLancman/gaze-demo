@@ -33,6 +33,7 @@ SKIP_CLIPS = {"gaze-loop.mp4"}  # v1, eyes closed
 ALIAS = {
     "gaze-loop-v2": "outer",
     "gaze-inner": "inner",
+    "gaze-down": "down",
 }
 
 # MediaPipe Face Mesh landmark indices
@@ -317,8 +318,11 @@ def choose_convention(rows):
     # PnP/matrix Euler proved gimbal-unstable on this footage (yaw flips to ±170°,
     # pitch swallowed the left/right motion). Nose offset is viewer-aligned and
     # stable: +nose_x = looking right, +nose_y (recentered) = looking up.
-    print("Forcing nose-offset convention (yaw_sign=1, pitch_sign=1).")
-    return "nose", 1, 1
+    # Yaw from nose offset (gimbal-free, viewer-aligned). Pitch from MediaPipe
+    # matrix: a true head *nod* (looking down) barely changes nose-to-eye
+    # offset — both features move together — but mat_pitch and face_cy track it.
+    print("Forcing hybrid convention: nose yaw + flipped mat_pitch (yaw_sign=1, pitch_sign=1).")
+    return "hybrid", 1, 1
 
     # Score each (source, yaw_sign, pitch_sign)
     best = ("mat", 1, 1, -1e9)
@@ -366,7 +370,12 @@ def choose_convention(rows):
 
 def apply_convention(rows, use, ys, ps):
     for r in rows:
-        if use == "nose":
+        if use == "hybrid":
+            r["yaw_raw"] = ys * r["nose_x"] * 35.0
+            # Flip so +pitch is up (mat_pitch grows as the head nods down).
+            r["pitch_raw"] = ps * (-(r["mat_pitch"] if r["mat_pitch"] is not None else 0.0))
+            r["roll"] = r["eye_roll"]
+        elif use == "nose":
             # Scale nose offsets into rough degrees so JS math is uniform.
             r["yaw_raw"] = ys * r["nose_x"] * 35.0
             r["pitch_raw"] = ps * r["nose_y"] * 35.0
@@ -389,9 +398,14 @@ def origin_and_recenter(rows):
     inner = [r for r in rows if r["src"] == "inner"]
     outer = [r for r in rows if r["src"] == "outer"]
     seeds = []
-    if outer:
-        # start and end of outer loop should be near center
-        seeds += [r for r in outer if r["t"] < 0.25 or r["t"] > 7.6]
+    # Start/end of every looping clip (outer, down, future rings) should be near center
+    by = {}
+    for r in rows:
+        by.setdefault(r["src"], []).append(r)
+    for src, grp in by.items():
+        if src == "inner":
+            continue
+        seeds += [r for r in grp if r["t"] < 0.25 or r["t"] > 7.6]
     if inner:
         # smallest 15% of inner radii — the circle's interior, near its center
         inn = sorted(inner, key=lambda r: r["_r0"])
@@ -429,10 +443,20 @@ def filter_rows(rows):
     for r in rows:
         reasons = []
         blink = ((r["blink_l"] or 0) + (r["blink_r"] or 0)) / 2
-        if r["ear"] < ear_thr:
-            reasons.append(f"ear={r['ear']:.3f}<{ear_thr:.3f}")
-        if blink > blink_thr:
+        # Downward gaze naturally lowers EAR (more eyelid is visible) even
+        # when the eyes are open. Allow a lower EAR for a clear downward
+        # nod, as long as the blink blendshape is not high and the lids
+        # are not fully shut.
+        looking_down = r.get("pitch", 0) < -4.0
+        if blink > 0.45:
             reasons.append(f"blink={blink:.2f}")
+        elif r["ear"] < 0.15:
+            reasons.append(f"ear={r['ear']:.3f}<0.15(shut)")
+        elif r["ear"] < ear_thr:
+            if looking_down and blink <= 0.43 and r["ear"] >= 0.15:
+                pass  # keep: open eyes, looking down
+            else:
+                reasons.append(f"ear={r['ear']:.3f}<{ear_thr:.3f}")
         if r["pnp_err"] is not None and r["pnp_err"] > pnp_thr * 1.15:
             reasons.append(f"pnp_err={r['pnp_err']:.1f}")
         if abs(r["roll"] or 0) > roll_thr:
@@ -617,6 +641,7 @@ def coverage_plot(rows, data, out_path: Path):
     colors = {
         "outer": "#c4a574",
         "inner": "#6ec4c8",
+        "down": "#e07a5f",
         "rest": "#f3ece0",
     }
     # leftover names get a palette
@@ -863,6 +888,24 @@ def main():
             r = cand[len(cand) // 2]
             print(f"  t={r['t']:.2f}  yaw={r['yaw']:+6.2f}  pitch={r['pitch']:+6.2f}  r={r['radius']:.2f}  ang={r['angle']:+6.1f}  ear={r['ear']:.3f}")
 
+    down = [r for r in all_rows if r["src"] == "down"]
+    if down:
+        print("\nDown clip radius: "
+              f"min={min(r['radius'] for r in down):.2f}  "
+              f"med={__import__('numpy').median([r['radius'] for r in down]):.2f}  "
+              f"max={max(r['radius'] for r in down):.2f}")
+        print("  pitch: "
+              f"min={min(r['pitch'] for r in down):.2f}  "
+              f"med={__import__('numpy').median([r['pitch'] for r in down]):.2f}  "
+              f"max={max(r['pitch'] for r in down):.2f}")
+        print("Down at 0/1/2/3/4/5/6/8s:")
+        for tt in (0, 1, 2, 3, 4, 5, 6, 8):
+            cand = [r for r in down if abs(r["t"] - tt) <= 0.15]
+            if not cand:
+                continue
+            r = cand[len(cand) // 2]
+            print(f"  t={r['t']:.2f}  yaw={r['yaw']:+6.2f}  pitch={r['pitch']:+6.2f}  r={r['radius']:.2f}  ang={r['angle']:+6.1f}  ear={r['ear']:.3f}")
+
     kept, dropped = filter_rows(all_rows)
     kept = light_dedup(kept, deg=0.50)
 
@@ -901,6 +944,9 @@ def main():
         ("outer-center", 0.0, "outer"),
         ("inner-t1", 1.0, "inner"),
         ("inner-t2", 2.0, "inner"),
+        ("down-left", 1.0, "down"),
+        ("down-center", 3.0, "down"),
+        ("down-right", 5.0, "down"),
     ]:
         cand = [r for r in kept if r["src"] == src and abs(r["t"] - t) <= 0.2]
         if not cand:

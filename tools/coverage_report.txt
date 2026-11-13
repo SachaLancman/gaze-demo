@@ -4,51 +4,57 @@ Maison Lunaire gaze coverage
 Clips (gaze-loop.mp4 / v1 skipped — closed eyes):
   outer  media/gaze-loop-v2.mp4   193 frames at 24fps
   inner  media/gaze-inner.mp4     193 frames at 24fps
+  down   media/gaze-down.mp4      193 frames at 24fps  (NEW)
 
-Pose: MediaPipe Face Landmarker on every frame. OpenCV solvePnP Euler
-angles were gimbal-unstable (yaw flips to ±170°), so the stored (yaw,
-pitch) is the recentered nose-offset in approximate degrees:
-  +yaw    = looking toward the viewer's right
-  +pitch  = looking up
+Pose: MediaPipe Face Landmarker on every frame. Hybrid convention:
+  +yaw    = nose-offset, viewer's right (PnP Euler is gimbal-unstable)
+  +pitch  = flipped MediaPipe mat_pitch (a true head *nod* barely
+            changes nose-to-eye offset; mat_pitch tracks it)
   origin  = looking-at-camera rest pose
-Sanity vs the outer-clip timeline (viewer's POV):
-  t=1s right  yaw=+14.3  pitch=-0.3
-  t=2s up     yaw=+14.5  pitch=+8.6   (actually up-right)
-  t=3s left   yaw=-11.0  pitch=+13.2  (actually up-left)
-  t=4s "down" yaw=-25.2  pitch=-7.8   (left and only slightly down)
-  t=0 and t=8 near origin
+Sanity (outer timeline, viewer's POV):
+  t=1s right   yaw=+14.2  pitch=+3.6
+  t=2s up      yaw=+14.4  pitch=+20.0   (up-right)
+  t=3s left    yaw=-11.1  pitch=+20.4   (up-left)
+  t=4s "down"  yaw=-25.3  pitch=-0.0    (left profile; outer clip has no real nod)
+  t=0 and t=8  near origin
+Down clip (open-eye frames only):
+  strongest kept: pitch=-15.2  (down_0060, down-left, r=17.0)
+  near-straight down: pitch=-14.4  (down_0159, yaw=+1.6, r=14.5)
+  The deepest nods in the raw clip (pitch ≈ -19 to -21 at t=5–6s) were
+  dropped: eyes were actually closed (EAR < 0.15, blink > 0.45).
 
-Filter: 11 inner frames around 5.58–5.9s dropped (eyes closed, EAR
-and blink blendshapes). 375 kept, then near-duplicate poses deduped
-at 0.5° → 166 clip frames + 1 rest frame from portrait.jpg = 167.
+Filter:
+  135 dropped (128 down + 7 inner). Closed-eye rule is pitch-aware:
+  a downward nod lowers EAR even with open lids, so frames with
+  pitch < -4°, EAR ≥ 0.15 and blink ≤ 0.43 are kept (visually open,
+  looking at the chest). Truly shut lids (EAR < 0.15 or blink > 0.45)
+  are still dropped. 444 kept, then 0.5° dedup → 208 + 1 rest = 209.
 
 Final set:
-  rest   1     (0, 0)
-  inner  38    r 0.22–6.26   (small glances near center)
-  outer  128   r 1.34–26.35  (large horseshoe along left / up / right)
-  maxAbsYaw=25.18  maxAbsPitch=14.17  rMax=26.35
+  rest   1
+  inner  47    r 0.2–8.1
+  outer  142   r 0.8–26.8   (horseshoe along left / up / right)
+  down   19    r 0.7–17.0   (south column + a down-left cluster)
+  maxAbsYaw=25.42  maxAbsPitch=25.27  rMax=26.80
 
-Coverage (cells of the yaw-pitch disk r≤rMax, nearest ≤ 3.16°):
-  all:        37.9%
-  interior (r<0.45 rmax):  59.4%   inner clip helps here
-  mid ring (0.45–0.75):    48.8%
-  outer (r>0.75):          20.6%   expected for a ring, not a filled disk
-  diagonals:  29.4%
-  cardinals:  46.6%
+Coverage (cells of the yaw-pitch disk r≤rMax, nearest ≤ 3.22°):
+  all:                        49.7%   (was 37.9%)
+  interior (r<0.45 rmax):     55.5%
+  mid ring (0.45–0.75):       49.2%
+  outer (r>0.75):             47.7%   (was 20.6%)
+  diagonals:                  45.4%   (was 29.4%)
+  cardinals:                  54.1%   (was 46.6%)
 
-Angular bins of the outer clip (30° wedges, 0=right, 90=up):
-  well covered: right, NE, up, NW, left, and slight-down-right (SE 330°)
-  EMPTY:        SW (210–240), straight down (270), SSE (300)
+Angular bins — down clip fills S (270°, 13 frames) and SW (240°/210°).
+SE (300–330°, down-right) is still almost empty: those frames in the
+down clip had closed eyes and were dropped.
 
-Gaps to fill with another clip (drop a file in media/ and re-run
-tools/process_frames.py — no code changes needed):
-  1. STRAIGHT DOWN and the lower diagonals (SW, SE below ~-8° pitch).
-     The current "down" extreme is a left-profile with only -8° pitch.
-     A downward-looking clip (and down-right / down-left) is the
-     highest-value addition.
-  2. A mid-radius ring (~8–14°) would fill the band between the inner
-     cluster (r≤6) and the outer horseshoe (typical r~15).
-  3. Pure up is actually fine (21 near-axis up frames, pitch up to 14°).
+Remaining gaps:
+  1. DOWN-RIGHT / SE diagonal (95% of that wedge uncovered).
+     A down-right clip with eyes held open is the highest-value add.
+  2. Mid-radius ring still thin in some sectors (between inner r≤8
+     and outer r~20), especially lower-right.
+  3. Straight-down at the *outer* radius (r>20, pitch < -20) — the
+     deepest nods were closed-eye. Kept max is -15.2° at r=17.
 
-Payload: 167 WebP frames at 848×480 q=64 + rest + site = 1.93 MB
-(source is 848×480; not upscaled). Under the 8 MB budget.
+Payload: 209 WebP frames at 848×480 q=64 + rest + site ≈ 2.32 MB.

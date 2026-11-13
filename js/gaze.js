@@ -136,12 +136,15 @@
   }
 
   function buildCoveredArc() {
-    const outer = frames.filter((f) => f.src === "outer" && f.radius > 6);
-    const rads = outer
+    // Any mid/large-radius pose (outer horseshoe, downward clip, future rings).
+    // Once the south is filled, the largest remaining gap is small and the
+    // short way around the loop is allowed.
+    const ring = frames.filter((f) => f.src !== "rest" && f.radius > 6);
+    const rads = ring
       .map((f) => (f.angle * Math.PI) / 180)
       .sort((a, b) => a - b);
     if (rads.length < 4) {
-      coveredArc = { start: -Math.PI, end: Math.PI, span: Math.PI * 2 };
+      coveredArc = { start: -Math.PI, end: Math.PI, span: Math.PI * 2, gap: 0 };
       return;
     }
     // Largest gap between successive angles (plus wrap) is the uncovered south opening.
@@ -171,8 +174,15 @@
     if (Math.abs(span) < want * 0.7) {
       span = span >= 0 ? want : -want;
     }
+    // If the largest remaining hole is small, the circle is complete:
+    // idle can orbit all the way around, and glide takes the true short way.
+    if (maxGap < 0.5) {
+      start = 0;
+      span = Math.PI * 2;
+      end = Math.PI * 2;
+    }
     coveredArc = { start, end, span, gap: maxGap };
-    const rs = outer.map((f) => f.radius);
+    const rs = ring.map((f) => f.radius);
     rs.sort((a, b) => a - b);
     outerMedR = rs[(rs.length / 2) | 0];
   }
